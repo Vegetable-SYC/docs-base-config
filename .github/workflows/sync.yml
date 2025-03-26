@@ -14,20 +14,20 @@ jobs:
         run: npm install @octokit/rest node-fetch
 
       - name: Trigger Dispatch Event
-          uses: actions/github-script@v6
-          with:
-            github-token: ${{ secrets.SYC_TOKEN }}
-            script: |
-              const { Octokit } = require('@octokit/rest');
-              const fetch = require('node-fetch').default;
+           uses: actions/github-script@v6
+           with:
+             github-token: ${{ secrets.SYC_TOKEN }}
+             script: |
+               const { Octokit } = require('@octokit/rest');
+               const fetch = require('node-fetch').default;
 
-              const octokit = new Octokit({ 
-                auth: process.env.PAT,
-                request: { fetch }
-              });
+               const octokit = new Octokit({ 
+                 auth: process.env.PAT,
+                 request: { fetch }
+               });
 
-              await octokit.rest.repos.createDispatchEvent({
-                owner: "Vegetable-SYC",
-                repo: "fnk0019-docs",
-                event_type: "update-docs-config"
-              });
+               await octokit.rest.repos.createDispatchEvent({
+                 owner: "Vegetable-SYC",
+                 repo: "fnk0019-docs",
+                 event_type: "update-docs-config"
+               });
