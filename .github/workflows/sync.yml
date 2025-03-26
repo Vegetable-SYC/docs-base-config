@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
-      contents: write  # 新增权限
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -28,9 +28,9 @@ jobs:
                 owner,
                 repo: repoName,
                 event_type: 'update-docs-config',
-                client_payload: {},  # 可传递自定义参数
+                client_payload: {},
                 headers: {
-                  authorization: `Bearer ${PAT}`  # 修正授权头格式
+                  authorization: `Bearer ${PAT}`
                 }
               });
             }
