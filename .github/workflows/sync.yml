@@ -15,7 +15,7 @@ jobs:
         with:
           script: |
             const targets = [
-              'Vegetable-SYC/fnk0019-docs',  # 改为你的实际项目名
+              'Vegetable-SYC/fnk0019-docs',
             ]
             
             targets.forEach(async repo => {
