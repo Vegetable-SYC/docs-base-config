@@ -15,7 +15,7 @@ jobs:
       - name: Trigger Updates
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.SYC_TOKEN }} 
+          PAT: ${{ secrets.CROSS_REPO_PAT }} 
         with:
           script: |
             const { PAT } = process.env;
