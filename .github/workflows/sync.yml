@@ -8,14 +8,15 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      actions: write  
+      actions: write
+      contents: write  # 新增权限
     steps:
       - uses: actions/checkout@v4
 
       - name: Trigger Updates
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.CROSS_REPO_PAT }}  
+          PAT: ${{ secrets.SYC_TOKEN }}
         with:
           script: |
             const { PAT } = process.env;
@@ -27,8 +28,9 @@ jobs:
                 owner,
                 repo: repoName,
                 event_type: 'update-docs-config',
+                client_payload: {},  # 可传递自定义参数
                 headers: {
-                  authorization: `token ${PAT}` 
+                  authorization: `Bearer ${PAT}`  # 修正授权头格式
                 }
               });
             }
