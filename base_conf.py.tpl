@@ -114,6 +114,5 @@ def setup(app):
     # app.add_css_file("css/custom.css")
     # app.add_css_file('https://cdn.jsdelivr.net/gh/Freenove/freenove-docs/docs/source/_static/css/custom.css')
 
-suppress_warnings = ['autosectionlabel.*']
-测试测试测试测试
+测试一下测试一下
 # <<< END BASE CONFIG
