@@ -7,25 +7,28 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions: 
-      contents: read
-      actions: write
+    permissions:
+      actions: write  
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Trigger Updates
         uses: actions/github-script@v6
+        env:
+          PAT: ${{ secrets.SYC_TOKEN }} 
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}  
           script: |
-            const targets = [
-              'Vegetable-SYC/fnk0019-docs'  
-            ]
-            
-            targets.forEach(async repo => {
+            const { PAT } = process.env;
+            const targets = ['Vegetable-SYC/fnk0019-docs'];
+
+            for (const repo of targets) {
+              const [owner, repoName] = repo.split('/');
               await github.rest.repos.createDispatchEvent({
-                owner: repo.split('/')[0],
-                repo: repo.split('/')[1],
-                event_type: 'update-docs-config'
-              })
-            })
+                owner,
+                repo: repoName,
+                event_type: 'update-docs-config',
+                headers: {
+                  authorization: `token ${PAT}`  
+                }
+              });
+            }
