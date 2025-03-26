@@ -7,22 +7,19 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    permissions: 
+      contents: read
       actions: write
-      issues: write
-      pull-requests: write
-
     steps:
       - uses: actions/checkout@v4
       
       - name: Trigger Updates
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.SYC_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}  
           script: |
             const targets = [
-              'Vegetable-SYC/fnk0019-docs',
+              'Vegetable-SYC/fnk0019-docs'  
             ]
             
             targets.forEach(async repo => {
