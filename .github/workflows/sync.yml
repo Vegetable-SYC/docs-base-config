@@ -17,7 +17,7 @@ jobs:
         with:
           script: |
             const { PAT } = process.env;
-            const octokit = new github.getOctokit(PAT); 
+            const octokit = new github.getOctokit(PAT);
 
             await octokit.rest.repos.createDispatchEvent({
               owner: "Vegetable-SYC",
