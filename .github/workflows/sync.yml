@@ -4,9 +4,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  GITHUB_TOKEN: ${{ secrets.FNKDOCS }}
+
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
       
