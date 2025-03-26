@@ -17,6 +17,7 @@ jobs:
         env:
           PAT: ${{ secrets.CROSS_REPO_PAT }} 
         with:
+          token: ${{ secrets.SYC_TOKEN }}
           script: |
             const { PAT } = process.env;
             const targets = ['Vegetable-SYC/fnk0019-docs'];
