@@ -16,10 +16,6 @@ jobs:
           script: |
             const targets = [
               'Vegetable-SYC/fnk0019-docs',  # 改为你的实际项目名
-              'Vegetable-SYC/fnk0020-docs'   # 改为你的其他项目
-              'Vegetable-SYC/fnk0022-docs'   # 改为你的其他项目
-              'Vegetable-SYC/fnk0023-docs'   # 改为你的其他项目
-              'Vegetable-SYC/fnk0024-docs'   # 改为你的其他项目
             ]
             
             targets.forEach(async repo => {
