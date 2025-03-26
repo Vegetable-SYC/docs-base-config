@@ -10,24 +10,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm install @octokit/rest node-fetch
+      - name: install
+        run: npm install @octokit/rest node-fetch@2 
 
-      - name: Trigger Dispatch Event
+      - name: reset
         uses: actions/github-script@v6
+        env:
+          PAT: ${{ secrets.CROSS_REPO_PAT }}
         with:
-          github-token: ${{ secrets.SYC_TOKEN }}
           script: |
             const { Octokit } = require('@octokit/rest');
-            const fetch = require('node-fetch').default;
+            const nodeFetch = require('node-fetch');  
 
-            const octokit = new Octokit({ 
+            const octokit = new Octokit({
               auth: process.env.PAT,
-              request: { fetch }
+              request: { fetch: nodeFetch }  
             });
 
-            await octokit.rest.repos.createDispatchEvent({
-              owner: "Vegetable-SYC",
-              repo: "fnk0019-docs",
-              event_type: "update-docs-config"
-            });
+            try {
+              await octokit.rest.repos.createDispatchEvent({
+                owner: "Vegetable-SYC",
+                repo: "fnk0019-docs",
+                event_type: "update-docs-config",
+                headers: {
+                  'X-GitHub-Api-Version': '2022-11-28'  
+                }
+              });
+            } catch (error) {
+              console.error('ERROR:', error.response?.data || error.message);
+            }
