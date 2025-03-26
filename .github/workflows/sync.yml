@@ -19,7 +19,7 @@ jobs:
       - name: Trigger Updates
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.DOCS }}
+          github-token: ${{ secrets.SYC_TOKEN }}
           script: |
             const targets = [
               'Vegetable-SYC/fnk0019-docs',
