@@ -16,8 +16,11 @@ jobs:
           PAT: ${{ secrets.SYC_TOKEN }}
         with:
           script: |
-            const { PAT } = process.env;
-            const octokit = new github.getOctokit(PAT);
+            const { Octokit } = require('@octokit/rest');
+            const octokit = new Octokit({ 
+              auth: process.env.PAT,
+              request: { fetch: require('node-fetch') }
+            });
 
             await octokit.rest.repos.createDispatchEvent({
               owner: "Vegetable-SYC",
