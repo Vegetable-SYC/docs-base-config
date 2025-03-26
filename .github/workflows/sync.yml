@@ -13,21 +13,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger Repository Dispatch
-         uses: actions/github-script@v6
-          with:
-            github-token: ${{ secrets.SYC_TOKEN }}
-            script: |
-            const targets = ['Vegetable-SYC/fnk0019-docs'];
-            for (const repo of targets) {
-                const [owner, repoName] = repo.split('/');
-                try {
-                await github.rest.repos.createDispatchEvent({
-                    owner,
-                    repo: repoName,
-                    event_type: 'update-docs-config'
-                });
-                } catch (error) {
-                core.setFailed(error.message);
-                }
+    - name: Trigger Repository Dispatch
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.SYC_TOKEN }}
+        script: |
+          const targets = ['Vegetable-SYC/fnk0019-docs'];
+          for (const repo of targets) {
+            const [owner, repoName] = repo.split('/');
+            try {
+              await github.rest.repos.createDispatchEvent({
+                owner,
+                repo: repoName,
+                event_type: 'update-docs-config'
+              });
+            } catch (error) {
+              core.setFailed(error.message);
             }
+          }
