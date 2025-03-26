@@ -4,14 +4,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  GITHUB_TOKEN: ${{ secrets.FNKDOCS }}
-
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
       issues: write
       pull-requests: write
 
@@ -21,6 +19,7 @@ jobs:
       - name: Trigger Updates
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.FNKDOCS }}
           script: |
             const targets = [
               'Vegetable-SYC/fnk0019-docs',
