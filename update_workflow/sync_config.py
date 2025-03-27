@@ -36,12 +36,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', required=True)
     parser.add_argument('--target', required=True)
-    args = parser.parse_args()
     
-    sync_config(args.source, args.target)
     # requirements
     parser.add_argument('--source_req', required=False)
     parser.add_argument('--target_req', required=False)
     args = parser.parse_args()
-
+    
+    sync_config(args.source, args.target)
     sync_requirements(args.source_req, args.target_req)
