@@ -37,11 +37,13 @@ jobs:
             }
           "
           echo "config_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
-
+      - name: Debug repo-config.json
+          run: cat ./repo-config.json
+          
       - name: Trigger repository dispatch
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.CROSS_REPO_PAT }}
+          PAT: ${{ secrets.SYC_TOKEN }}
         with:
           script: |
             const fs = require('fs').promises;
