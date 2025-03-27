@@ -79,13 +79,3 @@ jobs:
                 }
               }
             }
-            console.log(`Payload 分支参数: ${repo.branch}`) // 添加此行
-            await octokit.rest.repos.createDispatchEvent({
-                owner,
-                repo: repo.name,
-                event_type: eventType,
-                client_payload: {
-                  branch: repo.branch,
-                  debug_time: new Date().toISOString() // 添加时间戳验证
-                }
-            })
