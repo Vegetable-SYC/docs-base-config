@@ -13,9 +13,8 @@ jobs:
       - name: Parse Config
         id: config
         run: |
-          CONFIG=$(cat repos-config.json | jq -c . | sed 's/"/\\"/g')
-          echo "config={\"data\":\"$CONFIG\"}" >> $GITHUB_OUTPUT
-        shell: bash
+          CONFIG=$(cat repos-config.json)
+          echo "config=${CONFIG}" >> $GITHUB_OUTPUT
 
       - name: Trigger Updates
         uses: actions/github-script@v6
