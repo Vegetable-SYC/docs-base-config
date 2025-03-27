@@ -1,3 +1,14 @@
+name: Sync Configuration  # 工作流名称：配置同步任务
+
+on:
+  # 触发条件：仅在 main 分支的以下路径发生变更时触发
+  push:
+    branches: [main]
+    paths:
+      - 'base_conf.py.tpl'     # 监控模板文件的变更
+      - 'update_workflow/**'   # 监控工作流目录及其子文件的变更
+  workflow_dispatch:           # 允许在 GitHub Actions 页面手动触发此工作流
+
 jobs:
   sync:
     runs-on: ubuntu-latest
