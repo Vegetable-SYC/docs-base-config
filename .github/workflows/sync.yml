@@ -41,10 +41,10 @@ jobs:
               request: { fetch: nodeFetch }
             });
 
-            # 从输入参数获取仓库列表
+            // 从输入参数获取仓库列表
             const repos = '${{ steps.load-repos.outputs.repos }}'.split(',');
 
-            # 批量处理
+            // 批量处理
             for (const repo of repos) {
               try {
                 const [owner, repoName] = repo.split('/');
