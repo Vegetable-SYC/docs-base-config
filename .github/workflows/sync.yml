@@ -8,13 +8,13 @@ jobs:
   sync-repos:
     runs-on: ubuntu-latest
     env:
-      OWNER: "Vegetable-SYC"  # 全局用户名配置
-      EVENT_TYPE: "update-docs-config"  # 统一事件类型
+      OWNER: "Vegetable-SYC"
+      EVENT_TYPE: "update-docs-config"
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: npm install @octokit/rest yaml js-yaml
+        run: npm install @octokit/rest js-yaml
 
       - name: Read repository config
         id: read-config
@@ -25,13 +25,18 @@ jobs:
             exit 1
           fi
           
-          # 将YAML转换为JSON输出
-          node -e "
+          JSON_DATA=$(node -e "
             const yaml = require('js-yaml');
             const fs = require('fs');
-            const config = yaml.load(fs.readFileSync('$CONFIG_PATH', 'utf8'));
-            console.log('::set-output name=repos::' + JSON.stringify(config.repositories));
-          "
+            try {
+              const config = yaml.load(fs.readFileSync('$CONFIG_PATH', 'utf8'));
+              console.log(JSON.stringify(config.repositories));
+            } catch (e) {
+              console.error(e);
+              process.exit(1);
+            }
+          ")
+          echo "repos=$JSON_DATA" >> $GITHUB_OUTPUT
 
       - name: Trigger repository dispatch
         uses: actions/github-script@v6
@@ -40,7 +45,8 @@ jobs:
         with:
           script: |
             const { Octokit } = require('@octokit/rest')
-            const repositories = JSON.parse('${{ steps.read-config.outputs.repos }}')
+            const repositories = JSON.parse('${{ toJSON(steps.read-config.outputs.repos) }}'.replace(/\\/g, '')) // 双重转义处理
+            
             const owner = process.env.OWNER
             const eventType = process.env.EVENT_TYPE
 
@@ -51,23 +57,22 @@ jobs:
 
             for (const repo of repositories) {
               try {
-                console.log(`Triggering ${owner}/${repo.name} (${repo.branch})`)
+                console.log(`Triggering ${owner}/${repo.name} on ${repo.branch}`)
                 
-                await octokit.rest.repos.createDispatchEvent({
+                const response = await octokit.rest.repos.createDispatchEvent({
                   owner,
                   repo: repo.name,
                   event_type: eventType,
                   client_payload: {
-                    branch: repo.branch  # 将分支信息传递给目标仓库
+                    branch: repo.branch
                   }
                 })
 
-                console.log(`Successfully triggered ${repo.name}`)
+                console.log(`Status: ${response.status} - ${repo.name}`)
               } catch (error) {
-                // 记录错误但继续执行其他仓库
-                console.error(`Error triggering ${repo.name}:`, error.message)
-                if (error.response) {
-                  console.error('Response data:', error.response.data)
+                console.error(`[ERROR] ${repo.name}:`, error.message)
+                if (error.response && error.response.data) {
+                  console.error('Details:', JSON.stringify(error.response.data))
                 }
               }
             }
