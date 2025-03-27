@@ -25,6 +25,31 @@ jobs:
           CONFIG_PATH="./.github/config/sync-repos.yml"
           OUTPUT_PATH="./repo-config.json"
           
+          # 添加调试：显示原始配置文件内容
+          echo "=== RAW YAML CONTENT ==="
+          cat $CONFIG_PATH
+          
+          node -e "
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+            try {
+              const config = yaml.load(fs.readFileSync('$CONFIG_PATH', 'utf8'));
+              console.log('Parsed YAML:', JSON.stringify(config, null, 2));  # 调试输出
+              fs.writeFileSync('$OUTPUT_PATH', JSON.stringify(config.repositories), 'utf8');
+            } catch (e) {
+              console.error('Config processing failed:', e);
+              process.exit(1);
+            }
+          "
+          
+          # 添加调试：验证生成的 JSON 文件
+          echo "=== GENERATED JSON ==="
+          cat $OUTPUT_PATH
+          
+          # 确保输出变量正确设置
+          echo "config_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+          echo "OUTPUT_PATH=$OUTPUT_PATH"   # 直接打印变量值
+
           node -e "
             const yaml = require('js-yaml');
             const fs = require('fs');
