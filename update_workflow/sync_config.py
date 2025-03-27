@@ -39,12 +39,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     sync_config(args.source, args.target)
-    # 新增参数解析
+    # requirements
     parser.add_argument('--source_req', required=False)
     parser.add_argument('--target_req', required=False)
     args = parser.parse_args()
-    
-    if args.source and args.target:
-        sync_config(args.source, args.target)
-    if args.source_req and args.target_req:  # 新增条件分支
-        sync_requirements(args.source_req, args.target_req)
+
+    sync_requirements(args.source_req, args.target_req)
