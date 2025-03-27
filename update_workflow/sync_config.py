@@ -40,6 +40,7 @@ if __name__ == '__main__':
     # requirements
     parser.add_argument('--source_req', required=False)
     parser.add_argument('--target_req', required=False)
+    
     args = parser.parse_args()
     
     sync_config(args.source, args.target)
