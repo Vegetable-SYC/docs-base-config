@@ -3,9 +3,11 @@ on:
   workflow_dispatch:
     inputs:
       repos:
-        description: '仓库列表（格式：owner/repo:branch，逗号分隔）'
+        description: 'list'
         required: true
-        default: 'Vegetable-SYC/fnk0019-docs:master'
+        default: >-
+          Vegetable-SYC/fnk0019-docs:master,
+          Vegetable-SYC/fnk0020-docs:master
 
 jobs:
   sync:
