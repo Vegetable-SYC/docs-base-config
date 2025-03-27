@@ -2,13 +2,25 @@ name: Sync Configuration
 on:
   push:
     branches: [main]
+    paths:
+          - 'base_conf.py.tpl'    
+          - 'update_workflow/**'  
   workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Trigger Updates
+        uses: actions/github-script@v6
+        env:
+          PAT: ${{ secrets.SYC_TOKEN }}
+        with:
+          script: |
 
       - name: install
         run: npm install @octokit/rest node-fetch@2 
@@ -16,7 +28,7 @@ jobs:
       - name: reset
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.CROSS_REPO_PAT }}
+          PAT: ${{ secrets.SYC_TOKEN }}
         with:
           script: |
             const { Octokit } = require('@octokit/rest');
