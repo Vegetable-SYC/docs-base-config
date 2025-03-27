@@ -4,7 +4,7 @@ copyright = '2016-2025, Freenove'
 author = 'Freenove'
 release = 'v1.0.0'
 version = 'v1.0.0'
-# 测试docs分支啦啦啦
+# 测试docs分支啦
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
