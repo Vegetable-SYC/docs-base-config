@@ -1,24 +1,22 @@
 name: Multi-Repo Sync
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      repos:
-        description: 'list'
-        required: true
-        default: >-
-          Vegetable-SYC/fnk0019-docs:master,
-          Vegetable-SYC/fnk0020-docs:master,
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: 安装依赖
-        run: npm install @octokit/rest node-fetch@2
 
-      - name: 触发多仓库分发
+      - name: Parse Config
+        id: config
+        run: |
+          CONFIG=$(cat repos-config.json)
+          echo "config=${CONFIG}" >> $GITHUB_OUTPUT
+
+      - name: Trigger Updates
         uses: actions/github-script@v6
         env:
           PAT: ${{ secrets.CROSS_REPO_PAT }}
@@ -26,36 +24,26 @@ jobs:
           script: |
             const { Octokit } = require('@octokit/rest');
             const nodeFetch = require('node-fetch');
-            const reposInput = '${{ github.event.inputs.repos }}';
-            
+            const config = JSON.parse('${{ steps.config.outputs.config }}');
+
             const octokit = new Octokit({
               auth: process.env.PAT,
               request: { fetch: nodeFetch }
             });
 
-            // 解析输入参数
-            const repoList = reposInput.split(',').map(repo => {
-              const [fullRepo, branch] = repo.split(':');
-              const [owner, repoName] = fullRepo.split('/');
-              return { owner, repo: repoName, branch: branch || 'main' };
-            });
-
-            // 批量触发
-            for (const { owner, repo, branch } of repoList) {
+            for (const { repo, branch } of config.repos) {
               try {
                 await octokit.rest.repos.createDispatchEvent({
-                  owner,
-                  repo,
-                  event_type: "update-docs-config",
-                  client_payload: { 
-                    ref: branch // 传递分支参数
-                  },
-                  headers: { 
-                    'X-GitHub-Api-Version': '2022-11-28'
+                  owner: config.username,
+                  repo: repo,
+                  event_type: "update-config",
+                  client_payload: {
+                    target_branch: branch
                   }
                 });
-                console.log(`已触发 ${owner}/${repo} (分支: ${branch})`);
+                console.log(`Triggered ${repo}@${branch}`);
               } catch (error) {
-                console.error(`错误：${owner}/${repo}`, error.response?.data || error.message);
+                console.error(`[ERROR] ${repo}:`, error.response?.data || error.message);
+                // 继续执行其他仓库的触发
               }
             }
