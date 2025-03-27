@@ -1,53 +1,52 @@
-name: Sync Configuration
-on:
-  push:
-    branches: [main]
-    paths:
-          - 'base_conf.py.tpl'    
-          - 'update_workflow/**'  
-  workflow_dispatch:
-
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       actions: write
+      contents: read  # 新增读取权限
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Trigger Updates
-        uses: actions/github-script@v6
-        env:
-          PAT: ${{ secrets.SYC_TOKEN }}
         with:
-          script: |
+          fetch-depth: 2  # 确保能读取历史提交
 
-      - name: install
-        run: npm install @octokit/rest node-fetch@2 
+      - name: read the list
+        id: load-repos
+        run: |
+          # 从配置文件读取仓库列表
+          REPOS=$(jq -r '.repositories | join(",")' .github/target_repos.json)
+          echo "repos=${REPOS}" >> $GITHUB_OUTPUT
 
-      - name: reset
+      - name: update
         uses: actions/github-script@v6
         env:
           PAT: ${{ secrets.SYC_TOKEN }}
         with:
           script: |
             const { Octokit } = require('@octokit/rest');
-            const nodeFetch = require('node-fetch');  
-
+            const nodeFetch = require('node-fetch');
             const octokit = new Octokit({
               auth: process.env.PAT,
-              request: { fetch: nodeFetch }  
+              request: { fetch: nodeFetch }
             });
 
-            try {
-              await octokit.rest.repos.createDispatchEvent({
-                owner: "Vegetable-SYC",
-                repo: "fnk0019-docs",
-                event_type: "update-docs-config",
-                headers: {
-                  'X-GitHub-Api-Version': '2022-11-28'  
-                }
-              });
-            } catch (error) {
-              console.error('ERROR:', error.response?.data || error.message);
+            # 从输入参数获取仓库列表
+            const repos = '${{ steps.load-repos.outputs.repos }}'.split(',');
+
+            # 批量处理
+            for (const repo of repos) {
+              try {
+                const [owner, repoName] = repo.split('/');
+                await octokit.rest.repos.createDispatchEvent({
+                  owner,
+                  repo: repoName,
+                  event_type: "update-docs-config",
+                  headers: {
+                    'X-GitHub-Api-Version': '2022-11-28'
+                  }
+                });
+                console.log(`BINGO ${repo}`);
+              } catch (error) {
+                console.error(`ERROR:`, error.message);
+              }
             }
