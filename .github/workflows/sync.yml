@@ -1,49 +1,73 @@
 name: Multi-Repo Sync
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  sync:
+  sync-repos:
     runs-on: ubuntu-latest
+    env:
+      OWNER: "Vegetable-SYC"  # 全局用户名配置
+      EVENT_TYPE: "update-docs-config"  # 统一事件类型
     steps:
       - uses: actions/checkout@v4
 
-      - name: Parse Config
-        id: config
-        run: |
-          CONFIG=$(cat repos-config.json)
-          echo "config=${CONFIG}" >> $GITHUB_OUTPUT
+      - name: Install dependencies
+        run: npm install @octokit/rest yaml js-yaml
 
-      - name: Trigger Updates
+      - name: Read repository config
+        id: read-config
+        run: |
+          CONFIG_PATH="./.github/config/sync-repos.yml"
+          if [ ! -f "$CONFIG_PATH" ]; then
+            echo "::error::Config file $CONFIG_PATH not found!"
+            exit 1
+          fi
+          
+          # 将YAML转换为JSON输出
+          node -e "
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+            const config = yaml.load(fs.readFileSync('$CONFIG_PATH', 'utf8'));
+            console.log('::set-output name=repos::' + JSON.stringify(config.repositories));
+          "
+
+      - name: Trigger repository dispatch
         uses: actions/github-script@v6
         env:
           PAT: ${{ secrets.CROSS_REPO_PAT }}
         with:
           script: |
-            const { Octokit } = require('@octokit/rest');
-            const nodeFetch = require('node-fetch');
-            const config = JSON.parse('${{ steps.config.outputs.config }}');
+            const { Octokit } = require('@octokit/rest')
+            const repositories = JSON.parse('${{ steps.read-config.outputs.repos }}')
+            const owner = process.env.OWNER
+            const eventType = process.env.EVENT_TYPE
 
             const octokit = new Octokit({
               auth: process.env.PAT,
-              request: { fetch: nodeFetch }
-            });
+              request: { fetch: require('node-fetch') }
+            })
 
-            for (const { repo, branch } of config.repos) {
+            for (const repo of repositories) {
               try {
+                console.log(`Triggering ${owner}/${repo.name} (${repo.branch})`)
+                
                 await octokit.rest.repos.createDispatchEvent({
-                  owner: config.username,
-                  repo: repo,
-                  event_type: "update-config",
+                  owner,
+                  repo: repo.name,
+                  event_type: eventType,
                   client_payload: {
-                    target_branch: branch
+                    branch: repo.branch  # 将分支信息传递给目标仓库
                   }
-                });
-                console.log(`Triggered ${repo}@${branch}`);
+                })
+
+                console.log(`Successfully triggered ${repo.name}`)
               } catch (error) {
-                console.error(`[ERROR] ${repo}:`, error.response?.data || error.message);
-                // 继续执行其他仓库的触发
+                // 记录错误但继续执行其他仓库
+                console.error(`Error triggering ${repo.name}:`, error.message)
+                if (error.response) {
+                  console.error('Response data:', error.response.data)
+                }
               }
             }
