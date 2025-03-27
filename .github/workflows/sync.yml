@@ -1,66 +1,100 @@
-name: Sync Configuration  # 工作流名称：配置同步任务
-
+name: Multi-Repo Sync
 on:
-  # 触发条件：仅在 main 分支的以下路径发生变更时触发
   push:
     branches: [main]
     paths:
-      - 'base_conf.py.tpl'         # 监控模板文件的变更
-      - 'update_workflow/**'   # 监控工作流目录及其子文件的变更
-  workflow_dispatch:            # 允许在 GitHub Actions 页面手动触发此工作流
+      - '.github/target_repos.json'  # 监控仓库列表变更
+      - 'base_conf.py.tpl'
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       actions: write
-      contents: read  # 新增读取权限
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # 确保能读取历史提交
+          fetch-depth: 2  # 需要获取历史记录来检测文件变化
 
+      # 步骤1：安装依赖
       - name: Install dependencies
-        run: npm install node-fetch @octokit/rest
+        run: npm install @octokit/rest node-fetch@2 yaml lodash
 
-      - name: read the list
-        id: load-repos
+      # 步骤2：读取动态仓库列表
+      - name: Load repo configs
+        id: load-config
         run: |
-          # 从配置文件读取仓库列表
-          REPOS=$(jq -r '.repositories | join(",")' .github/target_repos.json)
-          echo "repos=${REPOS}" >> $GITHUB_OUTPUT
+          # 从配置文件读取仓库列表（支持JSON/YAML）
+          if [ -f .github/target_repos.yaml ]; then
+            echo "REPO_CONFIG=$(cat .github/target_repos.yaml)" >> $GITHUB_OUTPUT
+          elif [ -f .github/target_repos.json ]; then
+            echo "REPO_CONFIG=$(cat .github/target_repos.json)" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: No repo config file found"
+            exit 1
+          fi
 
-      - name: update
+      # 步骤3：批量触发更新
+      - name: Trigger Repo Updates
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.SYC_TOKEN }}
+          PAT: ${{ secrets.MASTER_PAT }}
         with:
           script: |
             const { Octokit } = require('@octokit/rest');
             const nodeFetch = require('node-fetch');
+            const yaml = require('yaml');
+            const _ = require('lodash');
+
+            // 初始化客户端
             const octokit = new Octokit({
               auth: process.env.PAT,
-              request: { fetch: nodeFetch }
+              request: { fetch: nodeFetch },
+              throttle: { enabled: true }  // 启用速率限制处理
             });
 
-            // 从输入参数获取仓库列表
-            const repos = '${{ steps.load-repos.outputs.repos }}'.split(',');
+            // 解析配置文件
+            const configText = `${{ steps.load-config.outputs.REPO_CONFIG }}`;
+            const repos = configText.startsWith('{') ? 
+              JSON.parse(configText).repositories : 
+              yaml.parse(configText).repositories;
 
-            // 批量处理
-            for (const repo of repos) {
-              try {
-                const [owner, repoName] = repo.split('/');
-                await octokit.rest.repos.createDispatchEvent({
-                  owner,
-                  repo: repoName,
-                  event_type: "update-docs-config",
-                  headers: {
-                    'X-GitHub-Api-Version': '2022-11-28'
+            // 分批次处理（每批5个仓库，间隔1秒）
+            const chunks = _.chunk(repos, 5);
+            for (const [index, batch] of chunks.entries()) {
+              console.log(`🚀 Processing batch ${index + 1}/${chunks.length}`);
+              
+              await Promise.all(batch.map(async repo => {
+                try {
+                  const [owner, repoName] = repo.split('/');
+                  
+                  // 高级验证：检查仓库是否存在
+                  const { status } = await octokit.rest.repos.get({
+                    owner,
+                    repo: repoName
+                  });
+
+                  if (status === 200) {
+                    await octokit.rest.repos.createDispatchEvent({
+                      owner,
+                      repo: repoName,
+                      event_type: "update-docs-config",
+                      headers: {
+                        'X-GitHub-Api-Version': '2022-11-28'
+                      }
+                    });
+                    console.log(`✅ ${repo} 触发成功`);
                   }
-                });
-                console.log(`BINGO ${repo}`);
-              } catch (error) {
-                console.error(`ERROR:`, error.message);
+                } catch (error) {
+                  console.error(`❌ ${repo} 失败:`, error.message);
+                }
+              }));
+
+              // 批次间延迟
+              if (index < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
               }
             }
