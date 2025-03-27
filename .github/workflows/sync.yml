@@ -27,13 +27,12 @@ jobs:
       - name: Load repo configs
         id: load-config
         run: |
-          # 从配置文件读取仓库列表（支持JSON/YAML）
           if [ -f .github/target_repos.yaml ]; then
             echo "REPO_CONFIG=$(cat .github/target_repos.yaml)" >> $GITHUB_OUTPUT
           elif [ -f .github/target_repos.json ]; then
             echo "REPO_CONFIG=$(cat .github/target_repos.json)" >> $GITHUB_OUTPUT
           else
-            echo "❌ Error: No repo config file found"
+            echo "Error: No repo config file found"
             exit 1
           fi
 
@@ -65,7 +64,7 @@ jobs:
             // 分批次处理（每批5个仓库，间隔1秒）
             const chunks = _.chunk(repos, 5);
             for (const [index, batch] of chunks.entries()) {
-              console.log(`🚀 Processing batch ${index + 1}/${chunks.length}`);
+              console.log(`Processing batch ${index + 1}/${chunks.length}`);
               
               await Promise.all(batch.map(async repo => {
                 try {
