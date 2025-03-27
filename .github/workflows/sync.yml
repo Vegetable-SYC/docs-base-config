@@ -38,7 +38,7 @@ jobs:
           "
           echo "config_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
       - name: Debug repo-config.json
-          run: cat ./repo-config.json
+        run: cat ./repo-config.json
           
       - name: Trigger repository dispatch
         uses: actions/github-script@v6
