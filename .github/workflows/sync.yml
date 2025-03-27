@@ -19,6 +19,12 @@ jobs:
         with:
           fetch-depth: 2  # 需要获取历史记录来检测文件变化
 
+      - name: Setup Tools
+        run: |
+          sudo apt-get install -y jq
+          wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
       # 步骤1：安装依赖
       - name: Install dependencies
         run: npm install @octokit/rest node-fetch@2 yaml lodash

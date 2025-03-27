@@ -1,2 +1,4 @@
 repositories:
-  - Vegetable-SYC/fnk0019-docs
+  - owner: Vegetable-SYC
+    name: fnk0019-docs
+    branch: master
