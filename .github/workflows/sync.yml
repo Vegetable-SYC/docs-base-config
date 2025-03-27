@@ -1,7 +1,7 @@
 name: Multi-Repo Sync
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -14,29 +14,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: npm install @octokit/rest js-yaml
+        run: npm install js-yaml @octokit/rest
 
-      - name: Read repository config
-        id: read-config
+      - name: Generate repository config
+        id: config
         run: |
           CONFIG_PATH="./.github/config/sync-repos.yml"
-          if [ ! -f "$CONFIG_PATH" ]; then
-            echo "::error::Config file $CONFIG_PATH not found!"
-            exit 1
-          fi
+          OUTPUT_PATH="./repo-config.json"
           
-          JSON_DATA=$(node -e "
+          node -e "
             const yaml = require('js-yaml');
             const fs = require('fs');
             try {
               const config = yaml.load(fs.readFileSync('$CONFIG_PATH', 'utf8'));
-              console.log(JSON.stringify(config.repositories));
+              fs.writeFileSync('$OUTPUT_PATH', JSON.stringify(config.repositories), 'utf8');
             } catch (e) {
-              console.error(e);
+              console.error('Config processing failed:', e);
               process.exit(1);
             }
-          ")
-          echo "repos=$JSON_DATA" >> $GITHUB_OUTPUT
+          "
+          echo "config_path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
 
       - name: Trigger repository dispatch
         uses: actions/github-script@v6
@@ -44,35 +41,38 @@ jobs:
           PAT: ${{ secrets.CROSS_REPO_PAT }}
         with:
           script: |
-            const { Octokit } = require('@octokit/rest')
-            const repositories = JSON.parse('${{ toJSON(steps.read-config.outputs.repos) }}'.replace(/\\/g, '')) // 双重转义处理
+            const fs = require('fs').promises;
+            const { Octokit } = require('@octokit/rest');
             
-            const owner = process.env.OWNER
-            const eventType = process.env.EVENT_TYPE
-
+            // 从文件读取确保数据完整性
+            const rawData = await fs.readFile('${{ steps.config.outputs.config_path }}', 'utf8');
+            const repositories = JSON.parse(rawData);
+            
             const octokit = new Octokit({
               auth: process.env.PAT,
               request: { fetch: require('node-fetch') }
-            })
+            });
 
             for (const repo of repositories) {
               try {
-                console.log(`Triggering ${owner}/${repo.name} on ${repo.branch}`)
+                console.log(`🚀 Triggering ${process.env.OWNER}/${repo.name}@${repo.branch}`);
                 
-                const response = await octokit.rest.repos.createDispatchEvent({
-                  owner,
+                const { status } = await octokit.rest.repos.createDispatchEvent({
+                  owner: process.env.OWNER,
                   repo: repo.name,
-                  event_type: eventType,
-                  client_payload: {
-                    branch: repo.branch
-                  }
-                })
+                  event_type: process.env.EVENT_TYPE,
+                  client_payload: { branch: repo.branch }
+                });
 
-                console.log(`Status: ${response.status} - ${repo.name}`)
+                console.log(`✅ ${repo.name} triggered (HTTP ${status})`);
               } catch (error) {
-                console.error(`[ERROR] ${repo.name}:`, error.message)
-                if (error.response && error.response.data) {
-                  console.error('Details:', JSON.stringify(error.response.data))
+                console.error(`❌ ${repo.name} failed: ${error.message}`);
+                if (error.response) {
+                  console.error('Error details:', JSON.stringify({
+                    status: error.status,
+                    headers: error.response.headers,
+                    data: error.response.data
+                  }, null, 2));
                 }
               }
             }
