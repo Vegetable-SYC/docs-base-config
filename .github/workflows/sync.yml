@@ -1,105 +1,59 @@
 name: Multi-Repo Sync
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/target_repos.json'  # 监控仓库列表变更
-      - 'base_conf.py.tpl'
   workflow_dispatch:
+    inputs:
+      repos:
+        description: '仓库列表（格式：owner/repo:branch，逗号分隔）'
+        required: true
+        default: 'Vegetable-SYC/fnk0019-docs:master'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # 需要获取历史记录来检测文件变化
+      
+      - name: 安装依赖
+        run: npm install @octokit/rest node-fetch@2
 
-      - name: Setup Tools
-        run: |
-          sudo apt-get install -y jq
-          wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      # 步骤1：安装依赖
-      - name: Install dependencies
-        run: npm install @octokit/rest node-fetch@2 yaml lodash
-
-      # 步骤2：读取动态仓库列表
-      - name: Load repo configs
-        id: load-config
-        run: |
-          if [ -f .github/target_repos.yaml ]; then
-            echo "REPO_CONFIG=$(cat .github/target_repos.yaml)" >> $GITHUB_OUTPUT
-          elif [ -f .github/target_repos.json ]; then
-            echo "REPO_CONFIG=$(cat .github/target_repos.json)" >> $GITHUB_OUTPUT
-          else
-            echo "Error: No repo config file found"
-            exit 1
-          fi
-
-      # 步骤3：批量触发更新
-      - name: Trigger Repo Updates
+      - name: 触发多仓库分发
         uses: actions/github-script@v6
         env:
-          PAT: ${{ secrets.MASTER_PAT }}
+          PAT: ${{ secrets.CROSS_REPO_PAT }}
         with:
           script: |
             const { Octokit } = require('@octokit/rest');
             const nodeFetch = require('node-fetch');
-            const yaml = require('yaml');
-            const _ = require('lodash');
-
-            // 初始化客户端
+            const reposInput = '${{ github.event.inputs.repos }}';
+            
             const octokit = new Octokit({
               auth: process.env.PAT,
-              request: { fetch: nodeFetch },
-              throttle: { enabled: true }  // 启用速率限制处理
+              request: { fetch: nodeFetch }
             });
 
-            // 解析配置文件
-            const configText = `${{ steps.load-config.outputs.REPO_CONFIG }}`;
-            const repos = configText.startsWith('{') ? 
-              JSON.parse(configText).repositories : 
-              yaml.parse(configText).repositories;
+            // 解析输入参数
+            const repoList = reposInput.split(',').map(repo => {
+              const [fullRepo, branch] = repo.split(':');
+              const [owner, repoName] = fullRepo.split('/');
+              return { owner, repo: repoName, branch: branch || 'main' };
+            });
 
-            // 分批次处理（每批5个仓库，间隔1秒）
-            const chunks = _.chunk(repos, 5);
-            for (const [index, batch] of chunks.entries()) {
-              console.log(`Processing batch ${index + 1}/${chunks.length}`);
-              
-              await Promise.all(batch.map(async repo => {
-                try {
-                  const [owner, repoName] = repo.split('/');
-                  
-                  // 高级验证：检查仓库是否存在
-                  const { status } = await octokit.rest.repos.get({
-                    owner,
-                    repo: repoName
-                  });
-
-                  if (status === 200) {
-                    await octokit.rest.repos.createDispatchEvent({
-                      owner,
-                      repo: repoName,
-                      event_type: "update-docs-config",
-                      headers: {
-                        'X-GitHub-Api-Version': '2022-11-28'
-                      }
-                    });
-                    console.log(`✅ ${repo} 触发成功`);
+            // 批量触发
+            for (const { owner, repo, branch } of repoList) {
+              try {
+                await octokit.rest.repos.createDispatchEvent({
+                  owner,
+                  repo,
+                  event_type: "update-docs-config",
+                  client_payload: { 
+                    ref: branch // 传递分支参数
+                  },
+                  headers: { 
+                    'X-GitHub-Api-Version': '2022-11-28'
                   }
-                } catch (error) {
-                  console.error(`❌ ${repo} 失败:`, error.message);
-                }
-              }));
-
-              // 批次间延迟
-              if (index < chunks.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                });
+                console.log(`已触发 ${owner}/${repo} (分支: ${branch})`);
+              } catch (error) {
+                console.error(`错误：${owner}/${repo}`, error.response?.data || error.message);
               }
             }
