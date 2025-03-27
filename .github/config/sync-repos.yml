@@ -2,4 +2,4 @@ repositories:
   - name: fnk0019-docs 
     branch: docs          
   - name: fnk0020-docs
-    branch: docs
+    branch: master
