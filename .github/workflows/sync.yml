@@ -21,6 +21,9 @@ jobs:
         with:
           fetch-depth: 2  # 确保能读取历史提交
 
+      - name: Install dependencies
+        run: npm install @octokit/rest node-fetch
+
       - name: read the list
         id: load-repos
         run: |
