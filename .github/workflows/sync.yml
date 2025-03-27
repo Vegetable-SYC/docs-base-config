@@ -6,7 +6,6 @@ on:
         description: 'list'
         required: true
         default: >-
-          Vegetable-SYC/fnk0019-docs:master,
           Vegetable-SYC/fnk0020-docs:master
 
 jobs:
