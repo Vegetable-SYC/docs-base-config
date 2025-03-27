@@ -22,6 +22,16 @@ def sync_config(source_path, target_path):
     with open(target_path, 'w', encoding='utf-8') as f:
         f.write(updated_content)
 
+# 处理 requirements.txt 的替换逻辑
+def sync_requirements(source_req, target_req):
+    # 读取模板内容
+    with open(source_req, 'r', encoding='utf-8') as f:
+        req_content = f.read()
+    
+    # 覆盖写入目标文件（使用覆盖模式而非正则替换）
+    with open(target_req, 'w', encoding='utf-8') as f:
+        f.write(req_content)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', required=True)
@@ -29,3 +39,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     sync_config(args.source, args.target)
+    # 新增参数解析
+    parser.add_argument('--source_req', required=False)
+    parser.add_argument('--target_req', required=False)
+    args = parser.parse_args()
+    
+    if args.source and args.target:
+        sync_config(args.source, args.target)
+    if args.source_req and args.target_req:  # 新增条件分支
+        sync_requirements(args.source_req, args.target_req)
